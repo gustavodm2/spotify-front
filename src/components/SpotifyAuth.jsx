@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-const SpotifyAuth = ({ onAuthenticated }) => {
+const SpotifyAuth = () => {
   const [error, setError] = useState(null);
   const BACKEND_URL = "http://localhost:3000";
+  const navigate = useNavigate();
 
   const handleLogin = async () => {
     try {
@@ -17,12 +19,26 @@ const SpotifyAuth = ({ onAuthenticated }) => {
         `menubar=no,location=no,resizable=no,scrollbars=no,status=no,width=${width},height=${height},top=${top},left=${left}`
       );
 
+      // Verifica periodicamente se o token foi armazenado
+      const checkAuthStatus = setInterval(() => {
+        const token = localStorage.getItem("spotify_token");
+        console.log("Token no localStorage:", token); // Debug
+
+        if (token) {
+          clearInterval(checkAuthStatus);
+          if (authWindow) authWindow.close();
+          navigate('/questions');
+        }
+      }, 500);
+
+      // Verifica se a janela foi fechada manualmente
       const checkWindowClosed = setInterval(() => {
         if (authWindow.closed) {
           clearInterval(checkWindowClosed);
+          clearInterval(checkAuthStatus);
           const token = localStorage.getItem("spotify_token");
-          if (token) {
-            onAuthenticated();
+          if (!token) {
+            setError("O login foi cancelado ou não foi concluído");
           }
         }
       }, 500);
@@ -37,9 +53,9 @@ const SpotifyAuth = ({ onAuthenticated }) => {
     const expiresAt = localStorage.getItem("spotify_token_expires_at");
 
     if (token && expiresAt && Date.now() < parseInt(expiresAt)) {
-      onAuthenticated();
+      navigate('/questions');
     }
-  }, [onAuthenticated]);
+  }, [navigate]);
 
   return (
     <div className="auth-container">
